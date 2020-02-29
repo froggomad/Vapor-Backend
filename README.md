@@ -20,6 +20,13 @@
     </a>
 </p>
 
+# Push Snopes to Firebase branch
+<hr>
+The "/snopes" endpoint will be used to trigger an async function that pushes the JSON to Firebase Realtime Database via the REST API
+<hr>
+<br>
+<br>
+
 # 2 Apps, 1 language, full stack!
 <img src="Both-Apps.png" alt="Screenshot"/>
 <hr>
