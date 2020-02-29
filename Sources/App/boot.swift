@@ -3,7 +3,7 @@ import Vapor
 /// Called after your application has initialized.
 public func boot(_ app: Application) throws {
     let scraper = Scraper.instance
-    scraper.getHTMLString(url: scraper.baseUrl) { (result) in
+    scraper.getHTMLString(url: scraper.snopesBaseURL) { (result) in
         guard let result = result else {
             NSLog("\(NSError(domain: "bootScraper", code: 400, userInfo: ["Boot Error":"Invalid Result from scraper"]))")
             return

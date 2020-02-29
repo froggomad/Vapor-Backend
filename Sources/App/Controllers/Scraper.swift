@@ -8,9 +8,15 @@
 import Foundation
 
 class Scraper {
+    //=======================
+    // MARK: - Properties
     static let instance = Scraper()
-    let baseUrl = URL(string: "https://www.snopes.com/fact-check/")!
+    let dbURL = URL(string: "https://check-that-fact.firebaseio.com")!
+    let snopesBaseURL = URL(string: "https://www.snopes.com/fact-check/")!
     var snopesArray = [Snopes]()
+    
+    //=======================
+    // MARK: - Snopes
     func scrapeSnopes(htmlString: String, complete: @escaping ([Snopes]?) -> ()) {
         //construct articleUrl - ref: <a class="media post-230824 fact_check type-fact_check status-publish has-post-thumbnail hentry tag-alexa tag-memes fact_check_category-technology fact_check_rating-mixture" href="https://www.snopes.com/fact-check/alexa-cpr/">
         var articleArray = htmlString.components(separatedBy: "<a class=\"media post-")
@@ -80,9 +86,38 @@ class Scraper {
                 if self.snopesArray.count == articleArray.count - 1 { //garbage in first position
                     complete(self.snopesArray)
                 }
+                let service = DatabaseService()
+                let jsonURL = self.dbURL.appendingPathComponent("Snopes")
+                    .appendingPathComponent(UUID().uuidString)
+                    .appendingPathExtension("json")
+                for article in self.snopesArray {
+                    service.put(article: article, to: jsonURL)
+                }
             }
         }
-        
+    }
+    
+    //=======================
+    // MARK: - Parse
+    /**
+        Given 2 or 3 terms, parses html from a String.
+     
+        If there are characters between your leftSideString and your rightSideString, include the unique characters just before the desired result in the searchString parameter
+        - parameter htmlString: The HTML to parse
+        - parameter leftSideString: The beginning of the string you're searching for a dynamic value in (i.e. "<a") - this should NOT include part of the term you want returned
+        - parameter rightSideString: The end of the string you're searching for a dynamic value in (i.e."/\\">") - this should NOT include part of the term you want returned
+        - parameter searchString: Find the text between this and the rightSideString (i.e. "href=\") - this should NOT include part of the term you want returned
+     */
+    private func unwrapAndParseHtmlString(htmlString: String, leftSideString: String, rightSideString: String, searchString: String? = nil) -> String? {
+        let contentArray = htmlString.components(separatedBy: leftSideString)
+        if contentArray.count > 1 {
+            let resultContent = contentArray[1].components(separatedBy: rightSideString)
+            guard let searchString = searchString else {return resultContent[0].trimmingCharacters(in: .whitespaces)}
+            let result = resultContent[0].components(separatedBy: searchString)
+            return result[1].trimmingCharacters(in: .whitespaces)
+        }
+        NSLog("\(NSError(domain: "scraper.unwrapAndParseHtmlString", code: 404, userInfo: ["htmlString.components":"unable to separate by \(leftSideString)"]))")
+        return nil
     }
     
     /**
@@ -109,6 +144,9 @@ class Scraper {
         }.resume()
     }
     
+    //=======================
+    // MARK: - Helpers
+    ///data formated for endpoint
     func JSONOutput() -> [String] {
         var returnArr = [String]()
         if !snopesArray.isEmpty {
@@ -137,26 +175,6 @@ class Scraper {
         return String(decoding: data, as: UTF8.self)
     }
     
-    /**
-        Given 2 or 3 terms, parses html from a String.
-     
-        If there are characters between your leftSideString and your rightSideString, include the unique characters just before the desired result in the searchString parameter
-        - parameter htmlString: The HTML to parse
-        - parameter leftSideString: The beginning of the string you're searching for a dynamic value in (i.e. "<a") - this should NOT include part of the term you want returned
-        - parameter rightSideString: The end of the string you're searching for a dynamic value in (i.e."/\\">") - this should NOT include part of the term you want returned
-        - parameter searchString: Find the text between this and the rightSideString (i.e. "href=\") - this should NOT include part of the term you want returned
-     */
-    private func unwrapAndParseHtmlString(htmlString: String, leftSideString: String, rightSideString: String, searchString: String? = nil) -> String? {
-        let contentArray = htmlString.components(separatedBy: leftSideString)
-        if contentArray.count > 1 {
-            let resultContent = contentArray[1].components(separatedBy: rightSideString)
-            guard let searchString = searchString else {return resultContent[0].trimmingCharacters(in: .whitespaces)}
-            let result = resultContent[0].components(separatedBy: searchString)
-            return result[1].trimmingCharacters(in: .whitespaces)
-        }
-        NSLog("\(NSError(domain: "scraper.unwrapAndParseHtmlString", code: 404, userInfo: ["htmlString.components":"unable to separate by \(leftSideString)"]))")
-        return nil
-    }
     
     private func encode(from type: Any?) -> Data {
         let jsonEncoder = JSONEncoder()
