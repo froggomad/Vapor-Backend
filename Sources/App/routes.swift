@@ -8,7 +8,7 @@ public func routes(_ router: Router) throws {
         return "Hey"
     }
     router.get("snopes") {req in
-        return scraper.snopesArray
+        return scraper._snopesArray
     }
 }
 

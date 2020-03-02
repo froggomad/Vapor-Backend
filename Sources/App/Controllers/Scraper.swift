@@ -11,9 +11,19 @@ class Scraper {
     //=======================
     // MARK: - Properties
     static let instance = Scraper()
-    let dbURL = URL(string: "https://check-that-fact.firebaseio.com")!
     let snopesBaseURL = URL(string: "https://www.snopes.com/fact-check/")!
     var snopesArray = [Snopes]()
+    
+    var _snopesArray: [Snopes] {
+        getHTMLString(url: snopesBaseURL) { (articlesHTML) in
+            guard let articlesHTML = articlesHTML else { return }
+            self.scrapeSnopes(htmlString: articlesHTML) { (result) in
+                guard let result = result else { return }
+                self.snopesArray = result
+            }
+        }
+        return snopesArray
+    }
     
     //=======================
     // MARK: - Snopes
@@ -87,12 +97,7 @@ class Scraper {
                     complete(self.snopesArray)
                 }
                 let service = DatabaseService()
-                let jsonURL = self.dbURL.appendingPathComponent("Snopes")
-                    .appendingPathComponent(UUID().uuidString)
-                    .appendingPathExtension("json")
-                for article in self.snopesArray {
-                    service.put(article: article, to: jsonURL)
-                }
+                service.updateArticles(articles: self.snopesArray)
             }
         }
     }

@@ -67,6 +67,7 @@ class NetworkService {
      Encode from a Swift object to JSON for transmitting to an endpoint and returns an EncodingStatus object which should either contain an error and nil request or request and nil error
      - parameter type: the type to be encoded (i.e. MyCustomType.self)
      - parameter request: the URLRequest used to transmit the encoded result to the remote server
+     - parameter dateFormatter: optional for use with JSONEncoder.dateEncodingStrategy
      */
     class func encode<T:Encodable>(from type: T, request: inout URLRequest, dateFormatter df: DateFormatter? = nil) -> EncodingStatus {
         let jsonEncoder = JSONEncoder()
@@ -82,7 +83,7 @@ class NetworkService {
         return EncodingStatus(request: request, error: nil)
     }
     
-    class func decode<T:Decodable>(to type: T, data: Data, dateFormatter df: DateFormatter? = nil) -> T? {
+    class func decode<T:Decodable>(to type: T.Type, data: Data, dateFormatter df: DateFormatter? = nil) throws -> T {
         let decoder = JSONDecoder()
         if let df = df {
             decoder.dateDecodingStrategy = .formatted(df)
@@ -91,8 +92,9 @@ class NetworkService {
             return try decoder.decode(T.self, from: data)
         } catch {
             print("Error Decoding JSON into \(String(describing: type)) Object \(error)")
-            return nil
+            throw error
         }
     }
+
 }
 
