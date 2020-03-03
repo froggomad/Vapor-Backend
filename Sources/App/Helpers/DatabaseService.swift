@@ -49,38 +49,39 @@ class DatabaseService {
         var snopesArticles: [Snopes] = []
         self.fetchArticlesFromFirebase() { error in
             snopesArticles = self.firebaseSnopesResults
-        }
-        let articlesToCompare = scraper.snopesArray.filter { //count is 3 fromSnopes
-            !snopesArticles.contains($0) //count should be 2
-        }
-        
-        let existingHeadlines = snopesArticles.map { $0.headline }
-        let articlesToUpdate = articlesToCompare.filter {
-            if existingHeadlines.contains($0.headline) {
-                return true
+            let articlesToCompare = scraper.snopesArray.filter { //count is 3 fromSnopes
+                !snopesArticles.contains($0) //count should be 2
             }
-            let firebaseArticleURL = DatabaseService().dbURL.appendingPathComponent("Snopes")
-                .appendingPathComponent($0.headline)
-                .appendingPathExtension("json")
-            put(article: $0, to: firebaseArticleURL)
-            return false
-        }
-        
-        for updatedArticle in articlesToUpdate {
-            for (index, snopesArticle) in snopesArticles.enumerated() {
-                if updatedArticle.headline == snopesArticle.headline {
-                    snopesArticles[index].articleDate = updatedArticle.articleDate
-                    snopesArticles[index].articleImageUrl = updatedArticle.articleImageUrl
-                    snopesArticles[index].articleText = updatedArticle.articleText
-                    snopesArticles[index].articleUrl = updatedArticle.articleUrl
-                    snopesArticles[index].ruling = updatedArticle.ruling
-                    let firebaseArticleURL = DatabaseService().dbURL.appendingPathComponent("Snopes")
-                        .appendingPathComponent(updatedArticle.headline)
-                        .appendingPathExtension("json")
-                    put(article: updatedArticle, to: firebaseArticleURL)
+            
+            let existingHeadlines = snopesArticles.map { $0.headline }
+            let articlesToUpdate = articlesToCompare.filter {
+                if existingHeadlines.contains($0.headline) {
+                    return true
+                }
+                let firebaseArticleURL = DatabaseService().dbURL.appendingPathComponent("Snopes")
+                    .appendingPathComponent($0.headline)
+                    .appendingPathExtension("json")
+                self.put(article: $0, to: firebaseArticleURL)
+                return false
+            }
+            
+            for updatedArticle in articlesToUpdate {
+                for (index, snopesArticle) in snopesArticles.enumerated() {
+                    if updatedArticle.headline == snopesArticle.headline {
+                        snopesArticles[index].articleDate = updatedArticle.articleDate
+                        snopesArticles[index].articleImageUrl = updatedArticle.articleImageUrl
+                        snopesArticles[index].articleText = updatedArticle.articleText
+                        snopesArticles[index].articleUrl = updatedArticle.articleUrl
+                        snopesArticles[index].ruling = updatedArticle.ruling
+                        let firebaseArticleURL = DatabaseService().dbURL.appendingPathComponent("Snopes")
+                            .appendingPathComponent(updatedArticle.headline)
+                            .appendingPathExtension("json")
+                        self.put(article: updatedArticle, to: firebaseArticleURL)
+                    }
                 }
             }
         }
+        
     }
     
     //=======================
