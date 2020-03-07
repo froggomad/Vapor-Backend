@@ -102,6 +102,6 @@ class DatabaseService {
                     complete(error)
                 }
             }
-        }
+        }.resume()
     }
 }
