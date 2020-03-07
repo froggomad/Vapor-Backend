@@ -49,8 +49,8 @@ class DatabaseService {
         var snopesArticles: [Snopes] = []
         self.fetchArticlesFromFirebase() { error in
             snopesArticles = self.firebaseSnopesResults
-            let articlesToCompare = scraper.snopesArray.filter {
-                !snopesArticles.contains($0)
+            let articlesToCompare = scraper.snopesArray.filter { //count is 3 fromSnopes
+                !snopesArticles.contains($0) //count should be 2
             }
             
             let existingHeadlines = snopesArticles.map { $0.headline }
@@ -87,10 +87,7 @@ class DatabaseService {
     //=======================
     // MARK: - Read
     func fetchArticlesFromFirebase(complete: @escaping complete = {_ in }) {
-        guard let decodingRequest = NetworkService.createRequest(url: dbURL, method: .get, headerType: .contentType, headerValue: .json) else {
-            complete(NSError(domain: "DatabaseService.fetchArticlesFromFirebase.decodingRequestInvalid", code: 999))
-            return
-        }
+        guard let decodingRequest = NetworkService.createRequest(url: dbURL, method: .get, headerType: .contentType, headerValue: .json) else { return }
         URLSession.shared.dataTask(with: decodingRequest) { (data, _, error) in
             if let error = error {
                 complete(error)
@@ -105,6 +102,6 @@ class DatabaseService {
                     complete(error)
                 }
             }
-        }.resume()
+        }
     }
 }
