@@ -75,7 +75,7 @@ final class AppTests: XCTestCase {
             }
         }
         XCTAssertEqual(snopesArticles.count, 3) //nothing should have been appended
-        XCTAssertEqual(articlesToCompare.count, 2) //1 article from Snopes is different from the articles on the server
+        XCTAssertEqual(articlesToCompare.count, 2) //1 article from Snopes is different from the articles on the "server"
         XCTAssertEqual(articlesToUpdate.count, 1) //this should differ from articlesToCompare if there were articles to add - there are none to add in this example
     }
 }
