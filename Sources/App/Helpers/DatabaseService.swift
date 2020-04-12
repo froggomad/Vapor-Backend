@@ -47,7 +47,7 @@ class DatabaseService {
     func updateArticles(articles: [Article]) {
         let scraper = Scraper.instance
         var snopesArticles: [Snopes] = []
-        self.fetchArticlesFromFirebase() { error in
+        self.fetchArticlesFromFirebase { error in
             snopesArticles = self.firebaseSnopesResults
             let articlesToCompare = scraper.snopesArray.filter { //count is 3 fromSnopes
                 !snopesArticles.contains($0) //count should be 2
@@ -86,8 +86,13 @@ class DatabaseService {
     
     //=======================
     // MARK: - Read
-    func fetchArticlesFromFirebase(complete: @escaping complete = {_ in }) {
-        guard let decodingRequest = NetworkService.createRequest(url: dbURL, method: .get, headerType: .contentType, headerValue: .json) else { return }
+    func fetchArticlesFromFirebase<T: Decodable>(endpoint: Endpoint,
+                                   complete: @escaping complete = {_ in }) {
+        let url = dbURL.appendingPathComponent(endpoint.rawValue)
+        guard let decodingRequest = NetworkService.createRequest(url: url,
+                                                                 method: .get,
+                                                                 headerType: .contentType,
+                                                                 headerValue: .json) else { return }
         URLSession.shared.dataTask(with: decodingRequest) { (data, _, error) in
             if let error = error {
                 complete(error)
@@ -95,8 +100,9 @@ class DatabaseService {
             }
             if let data = data {
                 do {
+                    let dict = try NetworkService.decode(to: [String:T].self, data: data)
+                    self.firebaseSnopesResults = dict.map {$1}
                     complete(nil)
-                    self.firebaseSnopesResults = try NetworkService.decode(to: [Snopes].self, data: data)
                 } catch {
                     print(error)
                     complete(error)

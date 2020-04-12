@@ -96,10 +96,10 @@ class Scraper {
                 if self.snopesArray.count == articleArray.count - 1 { //garbage in first position
                     complete(self.snopesArray)
                 }
-                let service = DatabaseService()
-                service.updateArticles(articles: self.snopesArray)
             }
         }
+        let service = DatabaseService()
+        service.updateArticles(articles: self.snopesArray)
     }
     
     //=======================

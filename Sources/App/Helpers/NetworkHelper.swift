@@ -6,9 +6,12 @@
 //
 
 import Foundation
-
+enum Endpoint: String {
+    case snopes
+    case factcheckorg
+}
 class NetworkService {
-    
+
     enum HttpMethod: String {
         case get = "GET"
         case post = "POST"
