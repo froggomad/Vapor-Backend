@@ -10,8 +10,15 @@ public func routes(_ router: Router) throws {
     router.get("snopes") {req in
         return scraper._snopesArray
     }
+    router.get("factcheckorg") {req in
+        return scraper._factCheckOrgArray
+    }
 }
 
 extension Snopes: Content {
+    
+}
+
+extension FactcheckOrgArticle: Content {
     
 }

@@ -22,5 +22,30 @@ public func boot(_ app: Application) throws {
                 print("scraping complete")
             }
         }
+        scraper.getHTMLString(url: scraper.factcheckOrgBaseUrl) { (htmlString) in
+            guard let htmlString = htmlString else {
+                NSLog(
+                    """
+                    Error getting factcheckorg html: \(#file), \(#function), \(#line)
+                    """)
+                return
+            }
+            scraper.scrapeFactCheckOrg(htmlString: htmlString) { articles in
+                guard let articles = articles else {
+                    NSLog(
+                        """
+                        Error scraping articles: \(#file), \(#function), \(#line)
+                        """)
+                    return
+                }
+                var articlesCopy = articles
+                articlesCopy = articles.sorted(by: {$0.articleDate > $1.articleDate}) //this isn't chronological, but alphabetical
+                for factcheckArticle in articlesCopy {
+                    print(factcheckArticle.articleDate)
+                    print(factcheckArticle.headline)
+                    print()
+                }
+            }
+        }
     }
 }

@@ -12,6 +12,7 @@ class Scraper {
     // MARK: - Properties
     static let instance = Scraper()
     let snopesBaseURL = URL(string: "https://www.snopes.com/fact-check/")!
+    let factcheckOrgBaseUrl = URL(string: "https://www.factcheck.org/the-factcheck-wire/")!
     var snopesArray = [Snopes]()
     
     var _snopesArray: [Snopes] {
@@ -24,6 +25,18 @@ class Scraper {
         }
         return snopesArray
     }
+
+    var factCheckOrgArray = [FactcheckOrgArticle]()
+    var _factCheckOrgArray: [FactcheckOrgArticle] {
+        getHTMLString(url: factcheckOrgBaseUrl) { (articlesHTML) in
+            guard let articlesHTML = articlesHTML else { return }
+            self.scrapeFactCheckOrg(htmlString: articlesHTML) { (result) in
+                guard let result = result else { return }
+                self.factCheckOrgArray = result
+            }
+        }
+        return factCheckOrgArray //this will probably only be updated every other run
+    }
     
     //=======================
     // MARK: - Snopes
@@ -35,60 +48,93 @@ class Scraper {
             let leftSideArticleUrl = "fact_check type-"
             let rightSideArticleUrl = "/\">"
             let articleUrlSearchString = "href=\""
-            guard let articleUrl = unwrapAndParseHtmlString(htmlString: article, leftSideString: leftSideArticleUrl, rightSideString: rightSideArticleUrl, searchString: articleUrlSearchString) else {
-                NSLog("\(NSError(domain: "scraper.scrapeSnopes.articleUrl", code: 404, userInfo: ["articleUrl":"nil"]))")
+            guard let articleUrl = unwrapAndParseHtmlString(htmlString: article,
+                                                            leftSideString: leftSideArticleUrl,
+                                                            rightSideString: rightSideArticleUrl,
+                                                            searchString: articleUrlSearchString) else {
+                let error = NSError(domain: "scraper.scrapeSnopes.articleUrl",
+                code: 404,
+                userInfo: ["articleUrl":"nil"])
+                NSLog("\(error)")
                 return
             }
             
             //construct Headline
             let leftSideHeadline = "<h5 class=\"title\">"
             let rightSideHeadline = "</h5>"
-            let articleHeadline = unwrapAndParseHtmlString(htmlString: article, leftSideString: leftSideHeadline, rightSideString: rightSideHeadline)
+            let articleHeadline = unwrapAndParseHtmlString(htmlString: article,
+                                                           leftSideString: leftSideHeadline,
+                                                           rightSideString: rightSideHeadline)
             
             //construct ArticleImageUrl
             let leftSideArticleImageUrl = "data-lazy-src=\""
             let rightSideArticleImageUrl = "\""
-            let articleImageUrl = unwrapAndParseHtmlString(htmlString: article, leftSideString: leftSideArticleImageUrl, rightSideString: rightSideArticleImageUrl)
+            let articleImageUrl = unwrapAndParseHtmlString(htmlString: article,
+                                                           leftSideString: leftSideArticleImageUrl,
+                                                           rightSideString: rightSideArticleImageUrl)
             
             //construct ArticleDate
             let leftSideArticleDate = "<li class=\"date breadcrumb-item\">"
             let rightSideArticleDate = "</li>"
-            let articleDate = unwrapAndParseHtmlString(htmlString: article, leftSideString: leftSideArticleDate, rightSideString: rightSideArticleDate)?.components(separatedBy: "\t").last
+            let articleDate = unwrapAndParseHtmlString(htmlString: article,
+                                                       leftSideString: leftSideArticleDate,
+                                                       rightSideString: rightSideArticleDate)?.components(separatedBy: "\t").last
             
             //construct articleText - need to chain from articleUrl
             var articleText: String?
             guard let inputURL = URL(string: articleUrl) else {
-                NSLog("\(NSError(domain: "scraper.scrapeSnopes.articleUrl", code: 404, userInfo: ["articleUrl":"invalid URL"]))")
+                let error = NSError(domain: "scraper.scrapeSnopes.articleUrl",
+                code: 404,
+                userInfo: ["articleUrl":"invalid URL"])
+                NSLog("\(error)")
                 return
             }
             getHTMLString(url: inputURL) { (htmlString) in
                 guard let htmlString = htmlString else {
-                    NSLog("\(NSError(domain: "scraper.scrapeSnopes.getHTMLString_begin", code: 404, userInfo: ["getHTMLString incoming":"nil"]))")
+                    let error = NSError(domain: "scraper.scrapeSnopes.getHTMLString_begin",
+                    code: 404,
+                    userInfo: ["getHTMLString incoming":"nil"])
+                    NSLog("\(error)")
                     return
                 }
                 let leftSideArticleText = "<main class=\"base-main\" role=\"main\">"
                 let rightSideArticleText = "<footer>"
-                articleText = self.unwrapAndParseHtmlString(htmlString: htmlString, leftSideString: leftSideArticleText, rightSideString: rightSideArticleText, searchString: nil)
+                articleText = self.unwrapAndParseHtmlString(htmlString: htmlString,
+                                                            leftSideString: leftSideArticleText,
+                                                            rightSideString: rightSideArticleText,
+                                                            searchString: nil)
                 
                 //construct articleRuling - need to chain from articleText
                 guard let articleText = articleText else {
-                    NSLog("\(NSError(domain: "scraper.scrapeSnopes.getHTMLString", code: 404, userInfo: ["articleRuling":"articleText is nil"]))")
+                    let error = NSError(domain: "scraper.scrapeSnopes.getHTMLString",
+                    code: 404,
+                    userInfo: ["articleRuling":"articleText is nil"])
+                    NSLog("\(error)")
                     return
                 }
                 let leftSideArticleRuling = "class=\"rating-label-"
                 let rightSideArticleRuling = "\">"
-                let articleRuling = self.unwrapAndParseHtmlString(htmlString: articleText, leftSideString: leftSideArticleRuling, rightSideString: rightSideArticleRuling) ?? "Unknown"
+                let articleRuling = self.unwrapAndParseHtmlString(htmlString: articleText,
+                                                                  leftSideString: leftSideArticleRuling,
+                                                                  rightSideString: rightSideArticleRuling) ?? "Unknown"
                 
                 guard var articleDate = articleDate,
                     let articleHeadline = articleHeadline,
                     let articleImageUrl = articleImageUrl
                 else {
-                    NSLog("\(NSError(domain: "scraper.scrapeSnopes.getHTMLString_end", code: 404, userInfo: ["final variables":"one or more required variables is nil"]))")
+                    let error = NSError(domain: "scraper.scrapeSnopes.getHTMLString_end",
+                                        code: 404,
+                                        userInfo: ["final variables":"one or more required variables is nil"])
+                    NSLog("\(error)")
                     return
                 }
                 articleDate = articleDate.components(separatedBy: "\t").last!
                 
-                let snopes = Snopes(articleDate: articleDate, articleUrl: articleUrl, headline: articleHeadline, articleText: articleText, articleImageUrl: articleImageUrl, ruling: articleRuling)
+                let snopes = Snopes(articleDate: articleDate,
+                                    articleUrl: articleUrl, headline: articleHeadline,
+                                    articleText: articleText,
+                                    articleImageUrl: articleImageUrl,
+                                    ruling: articleRuling)
                 if !self.snopesArray.contains(snopes) {
                     self.snopesArray.append(snopes)
                 }
@@ -100,6 +146,111 @@ class Scraper {
         }
         let service = DatabaseService()
         service.updateArticles(articles: self.snopesArray)
+    }
+
+    func scrapeFactCheckOrg(htmlString: String,
+                            complete: @escaping ([FactcheckOrgArticle]?) -> ()) {
+        var articleArray = htmlString.components(separatedBy: "<article class=\"post-")
+        articleArray.removeFirst()
+        //construct article
+        for article in articleArray {
+            let leftSideArticle = "type-post"
+            let rightSideArticle = "</article>"
+            print("scraping factcheckorg started.")
+            guard let articleSearchElement = self.unwrapAndParseHtmlString(htmlString: article,
+                                                                           leftSideString: leftSideArticle,
+                                                                           rightSideString: rightSideArticle)
+                else { return }
+
+            //get date
+            let leftSideDate = "<div class=\"entry-meta\">"
+            let rightSideDate = "</div>"
+            let date = self.unwrapAndParseHtmlString(htmlString: articleSearchElement,
+                                                     leftSideString: leftSideDate,
+                                                     rightSideString: rightSideDate)
+            //get headline
+            let leftSideHeadline = "<h3 class=\"entry-title\">"
+            let rightSideHeadline = "</a>"
+            let headlineSearchString = "rel=\"bookmark\">"
+            let headline = self.unwrapAndParseHtmlString(htmlString: articleSearchElement,
+                                                         leftSideString: leftSideHeadline,
+                                                         rightSideString: rightSideHeadline,
+                                                         searchString: headlineSearchString)
+            //get image
+            let leftSideImage = "archive-post-thumbnail\"><img width=\""
+            let rightSideImage = "\" class=\"attachment-thumbnail"
+            let imageSearchString = "src=\""
+            let image = self.unwrapAndParseHtmlString(htmlString: articleSearchElement,
+                                                      leftSideString: leftSideImage,
+                                                      rightSideString: rightSideImage,
+                                                      searchString: imageSearchString)
+
+            //get articleUrl
+            let leftSideArticleUrl = "<h3 class=\"entry-title\">"
+            let rightSideArticleUrl = "\" rel=\"bookmark\">"
+            let articleUrlSearchString = "<a href=\""
+            guard let articleUrl = self.unwrapAndParseHtmlString(htmlString: articleSearchElement,
+                                                                 leftSideString: leftSideArticleUrl,
+                                                                 rightSideString: rightSideArticleUrl,
+                                                                 searchString: articleUrlSearchString)
+                else {
+                    let error = NSError(domain: "scraper.scrapeFactcheckOrg.articleUrl",
+                                        code: 404,
+                                        userInfo: ["articleUrl":"invalid URL"])
+                    NSLog(
+                        """
+                        Error articleUrl is nil: \(#file), \(#function), \(#line) -
+                        \(error)
+                        """)
+                    return
+            }
+
+            //get articleText
+            var text: String?
+            guard let inputURL = URL(string: articleUrl) else {
+                let error = NSError(domain: "scraper.scrapeFactcheckOrg.articleUrl",
+                                    code: 404,
+                                    userInfo: ["articleUrl":"invalid URL"])
+                NSLog("\(error)")
+                return
+            }
+            print("scraping factcheckorg midpoint.")
+            self.getHTMLString(url: inputURL) { (htmlString) in
+                guard let htmlString = htmlString else {
+                    let error = NSError(domain: "scraper.scrapeFactcheckOrg.getHTMLString_begin",
+                                        code: 404,
+                                        userInfo: ["getHTMLString incoming":"nil"])
+                    NSLog("\(error)")
+                    return
+                }
+                let leftSideArticleText = "<div class=\"wrapper\" id=\"single-wrapper\">"
+                let rightSideArticleText = "<div class=\"wrapper\" id=\"wrapper-footer\">"
+                text = self.unwrapAndParseHtmlString(htmlString: htmlString,
+                                                     leftSideString: leftSideArticleText,
+                                                     rightSideString: rightSideArticleText,
+                                                     searchString: nil)
+                print("scraping factcheckorg mid pre-unwrap.")
+                guard let articleDate = date,
+                    let articleHeadline = headline,
+                    let articleText = text,
+                    let articleImage = image
+                    else { return }
+                print("scraping factcheckorg mid post-unwrap.")
+                let factcheckArticle = FactcheckOrgArticle(articleDate: articleDate,
+                                                           articleUrl: articleUrl,
+                                                           headline: articleHeadline,
+                                                           articleText: articleText,
+                                                           articleImageUrl: articleImage)
+                if !self.factCheckOrgArray.contains(factcheckArticle) {
+                    self.factCheckOrgArray.append(factcheckArticle)
+                }
+                //don't complete until the array is filled
+                if self.factCheckOrgArray.count == articleArray.count - 1 { //garbage in first position
+                    complete(self.factCheckOrgArray)
+                }
+                complete(nil)
+            }
+        }
     }
     
     //=======================
@@ -113,22 +264,31 @@ class Scraper {
         - parameter rightSideString: The end of the string you're searching for a dynamic value in (i.e."/\\">") - this should NOT include part of the term you want returned
         - parameter searchString: Find the text between this and the rightSideString (i.e. "href=\") - this should NOT include part of the term you want returned
      */
-    private func unwrapAndParseHtmlString(htmlString: String, leftSideString: String, rightSideString: String, searchString: String? = nil) -> String? {
+    private func unwrapAndParseHtmlString(htmlString: String,
+                                          leftSideString: String,
+                                          rightSideString: String,
+                                          searchString: String? = nil) -> String? {
         let contentArray = htmlString.components(separatedBy: leftSideString)
         if contentArray.count > 1 {
             let resultContent = contentArray[1].components(separatedBy: rightSideString)
-            guard let searchString = searchString else {return resultContent[0].trimmingCharacters(in: .whitespaces)}
+            guard let searchString = searchString else {
+                return resultContent[0].trimmingCharacters(in: .whitespaces)
+            }
             let result = resultContent[0].components(separatedBy: searchString)
             return result[1].trimmingCharacters(in: .whitespaces)
         }
-        NSLog("\(NSError(domain: "scraper.unwrapAndParseHtmlString", code: 404, userInfo: ["htmlString.components":"unable to separate by \(leftSideString)"]))")
+        let error = NSError(domain: "scraper.unwrapAndParseHtmlString",
+                            code: 404,
+                            userInfo: ["htmlString.components":"unable to separate by \(leftSideString)"])
+        NSLog("\(error)")
         return nil
     }
     
     /**
         Returns utf8 encoded String from html data for parsing
      */
-    func getHTMLString(url: URL, complete: @escaping (_: String?) -> ()) {
+    func getHTMLString(url: URL,
+                       complete: @escaping (_: String?) -> ()) {
         URLSession.shared.dataTask(with: url) { (data, response, error) in
             if let error = error {
                 print("Error retrieving html string from \(url): \(String(describing: error))")
@@ -136,12 +296,19 @@ class Scraper {
                 return
             }
           guard let data = data else {
-            NSLog("\(NSError(domain: "scraper.getHTMLString", code: 404, userInfo: ["incoming data":"nil"]))")
+            let error = NSError(domain: "scraper.getHTMLString",
+                                code: 404,
+                                userInfo: ["incoming data":"nil"])
+            NSLog("\(error)")
             complete(nil)
             return
           }
-          guard let htmlString = String(data: data, encoding: .utf8) else {
-            NSLog("\(NSError(domain: "scraper.getHTMLString", code: 404, userInfo: ["htmlString":"Failure encoding to .utf8"]))")
+          guard let htmlString = String(data: data,
+                                        encoding: .utf8) else {
+            let error = NSError(domain: "scraper.getHTMLString",
+                                code: 404,
+                                userInfo: ["htmlString":"Failure encoding to .utf8"])
+            NSLog("\(error)")
             complete(nil)
             return
           }
@@ -159,7 +326,10 @@ class Scraper {
             for (index, snopes) in snopesArray.enumerated() {
                 let data = encode(from: snopes)
                 guard let dataToString = dataToString(data: data) else {
-                    NSLog("\(NSError(domain: "scraper.JSONOutput", code: 404, userInfo: ["articleRuling":"articleText is nil"]))")
+                    let error = NSError(domain: "scraper.JSONOutput",
+                                        code: 404,
+                                        userInfo: ["articleRuling":"articleText is nil"])
+                    NSLog("\(error)")
                     break
                 }
                 if index != lastIndex - 1 {
@@ -180,20 +350,19 @@ class Scraper {
         return String(decoding: data, as: UTF8.self)
     }
     
-    
-    private func encode(from type: Any?) -> Data {
-        let jsonEncoder = JSONEncoder()
-        do {
-            switch type {
-            case is Snopes:
-               return try jsonEncoder.encode(type as? Snopes)
-            default: fatalError("\(String(describing: type)) is not defined locally in encode function")
-            }
-        } catch {
-            print("Error encoding User object into JSON \(error)")
-            return Data()
-        }
-    }
+//    private func encode(from type: Any?) -> Data {
+//        let jsonEncoder = JSONEncoder()
+//        do {
+//            switch type {
+//            case is Snopes:
+//               return try jsonEncoder.encode(type as? Snopes)
+//            default: fatalError("\(String(describing: type)) is not defined locally in encode function")
+//            }
+//        } catch {
+//            print("Error encoding Snopes object into JSON \(error)")
+//            return Data()
+//        }
+//    }
     
 
 }
