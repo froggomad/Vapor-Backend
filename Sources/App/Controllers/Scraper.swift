@@ -135,17 +135,21 @@ class Scraper {
                                     articleText: articleText,
                                     articleImageUrl: articleImageUrl,
                                     ruling: articleRuling)
+                var duplicates = 0
                 if !self.snopesArray.contains(snopes) {
                     self.snopesArray.append(snopes)
+                } else {
+                    duplicates += 1
                 }
                 //don't complete until the array is filled
-                if self.snopesArray.count == articleArray.count - 1 { //garbage in first position
+                if self.snopesArray.count == articleArray.count - duplicates - 1 { //garbage in first position
+                    let service = DatabaseService()
+                    service.updateArticles(articles: self.snopesArray)
                     complete(self.snopesArray)
                 }
             }
         }
-        let service = DatabaseService()
-        service.updateArticles(articles: self.snopesArray)
+
     }
 
     func scrapeFactCheckOrg(htmlString: String,
@@ -156,7 +160,6 @@ class Scraper {
         for article in articleArray {
             let leftSideArticle = "type-post"
             let rightSideArticle = "</article>"
-            print("scraping factcheckorg started.")
             guard let articleSearchElement = self.unwrapAndParseHtmlString(htmlString: article,
                                                                            leftSideString: leftSideArticle,
                                                                            rightSideString: rightSideArticle)
@@ -214,7 +217,6 @@ class Scraper {
                 NSLog("\(error)")
                 return
             }
-            print("scraping factcheckorg midpoint.")
             self.getHTMLString(url: inputURL) { (htmlString) in
                 guard let htmlString = htmlString else {
                     let error = NSError(domain: "scraper.scrapeFactcheckOrg.getHTMLString_begin",
@@ -229,27 +231,30 @@ class Scraper {
                                                      leftSideString: leftSideArticleText,
                                                      rightSideString: rightSideArticleText,
                                                      searchString: nil)
-                print("scraping factcheckorg mid pre-unwrap.")
                 guard let articleDate = date,
                     let articleHeadline = headline,
                     let articleText = text,
                     let articleImage = image
                     else { return }
-                print("scraping factcheckorg mid post-unwrap.")
                 let factcheckArticle = FactcheckOrgArticle(articleDate: articleDate,
                                                            articleUrl: articleUrl,
                                                            headline: articleHeadline,
                                                            articleText: articleText,
                                                            articleImageUrl: articleImage)
+                var duplicates = 0
                 if !self.factCheckOrgArray.contains(factcheckArticle) {
                     self.factCheckOrgArray.append(factcheckArticle)
+                } else {
+                    duplicates += 1
                 }
                 //don't complete until the array is filled
-                if self.factCheckOrgArray.count == articleArray.count - 1 { //garbage in first position
+                if self.factCheckOrgArray.count == articleArray.count - duplicates {
                     complete(self.factCheckOrgArray)
+                } else {
+                    print("Bad count:\n","factcheckorg count:", self.factCheckOrgArray.count, "article count:", articleArray.count)
                 }
-                complete(nil)
             }
+            complete(nil)
         }
     }
     
@@ -350,19 +355,19 @@ class Scraper {
         return String(decoding: data, as: UTF8.self)
     }
     
-//    private func encode(from type: Any?) -> Data {
-//        let jsonEncoder = JSONEncoder()
-//        do {
-//            switch type {
-//            case is Snopes:
-//               return try jsonEncoder.encode(type as? Snopes)
-//            default: fatalError("\(String(describing: type)) is not defined locally in encode function")
-//            }
-//        } catch {
-//            print("Error encoding Snopes object into JSON \(error)")
-//            return Data()
-//        }
-//    }
+    private func encode(from type: Any?) -> Data {
+        let jsonEncoder = JSONEncoder()
+        do {
+            switch type {
+            case is Snopes:
+               return try jsonEncoder.encode(type as? Snopes)
+            default: fatalError("\(String(describing: type)) is not defined locally in encode function")
+            }
+        } catch {
+            print("Error encoding Snopes object into JSON \(error)")
+            return Data()
+        }
+    }
     
 
 }

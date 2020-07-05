@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct FactcheckOrgArticle: Article {
+struct FactcheckOrgArticle: Article, Codable, Equatable {
     var articleDate: String
     var articleUrl: String
     var headline: String
